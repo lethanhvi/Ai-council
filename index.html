@@ -266,9 +266,11 @@ body {
 
 /* CHAT */
 .chat {
-  flex: 1; overflow-y: auto;
+  flex: 1; overflow-y: scroll;
   padding: 16px;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .chat::-webkit-scrollbar { width: 3px; }
@@ -735,9 +737,15 @@ function buildApiMessages(agent, latestUserMsg) {
 }
 
 async function callClaude(systemPrompt, msgs) {
-  const res = await fetch('/api/chat', {
+  const API_KEY = 'PASTE_YOUR_KEY_HERE'; // Thay bằng sk-ant-... của bạn
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
@@ -829,7 +837,16 @@ function setStatus(thinking) {
 }
 
 function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  // Strip self-intro like "**Minh (CEO):**" or "[Minh]:" at start
+  str = str.replace(/^\*\*[^*]+\*\*:\s*/,'').replace(/^\[[^\]]+\]:\s*/,'');
+  return str
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code style="background:#1a1d24;border:1px solid #252830;border-radius:3px;padding:1px 6px;font-family:monospace;font-size:12px;color:#4d9fff">$1</code>')
+    .replace(/\n/g,'<br>');
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
