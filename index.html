@@ -429,10 +429,86 @@ body {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
 }
+
+/* KEY MODAL */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999; padding: 24px;
+  backdrop-filter: blur(4px);
+}
+.modal-box {
+  background: #0f1115;
+  border: 1px solid rgba(0,229,160,0.3);
+  border-radius: 14px;
+  padding: 28px 24px;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 0 40px rgba(0,229,160,0.08);
+}
+.modal-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px; letter-spacing: 3px;
+  color: var(--green); margin-bottom: 6px;
+}
+.modal-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 1px; margin-bottom: 20px;
+  line-height: 1.6;
+}
+.modal-input {
+  width: 100%; background: #1a1d24;
+  border: 1px solid #252830;
+  border-radius: 8px; padding: 12px 14px;
+  color: var(--text); font-size: 13px;
+  font-family: 'Space Mono', monospace;
+  margin-bottom: 12px; letter-spacing: 0.5px;
+}
+.modal-input:focus { outline: none; border-color: rgba(0,229,160,0.4); }
+.modal-btn {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, rgba(0,229,160,0.2), rgba(0,229,160,0.1));
+  border: 1px solid rgba(0,229,160,0.4);
+  border-radius: 8px; color: var(--green);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; cursor: pointer;
+}
+.modal-note {
+  font-size: 11px; color: var(--muted);
+  text-align: center; margin-top: 12px;
+  line-height: 1.6;
+}
+.modal-note a { color: rgba(0,229,160,0.6); }
+.key-indicator {
+  display: flex; align-items: center; gap: 6px;
+  cursor: pointer;
+}
+.key-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--red); box-shadow: 0 0 6px var(--red);
+}
+.key-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.key-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; color: var(--muted); letter-spacing: 1px;
+}
 </style>
 </head>
 <body>
 
+
+<!-- KEY MODAL -->
+<div class="modal-overlay" id="key-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">🔑 API KEY</div>
+    <div class="modal-sub">Nhập Anthropic API key để bắt đầu.<br>Key được lưu trên thiết bị của bạn.</div>
+    <input class="modal-input" id="key-input" type="password"
+      placeholder="sk-ant-api03-..." />
+    <button class="modal-btn" onclick="saveKey()">XÁC NHẬN & LƯU</button>
+    <p class="modal-note">Lấy key tại <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a><br>Key không được gửi đi nơi nào khác.</p>
+  </div>
+</div>
 <!-- HEADER -->
 <div class="header">
   <div class="logo">
@@ -442,12 +518,16 @@ body {
       <div class="logo-sub">VIRTUAL MEETING ROOM</div>
     </div>
   </div>
-  <div class="header-right" id="header-right" style="display:none">
-    <div class="status-badge">
+  <div class="header-right" id="header-right">
+    <div class="key-indicator" onclick="showKeyModal()" title="Đổi API key">
+      <div class="key-dot" id="key-dot"></div>
+      <span class="key-label" id="key-label">KEY</span>
+    </div>
+    <div class="status-badge" id="status-badge" style="display:none">
       <div class="status-dot" id="status-dot"></div>
       <span class="status-text" id="status-text">ONLINE</span>
     </div>
-    <button class="end-btn" onclick="endMeeting()">✕ KẾT THÚC</button>
+    <button class="end-btn" id="end-btn" onclick="endMeeting()" style="display:none">✕ KẾT THÚC</button>
   </div>
 </div>
 
@@ -605,7 +685,8 @@ async function startMeeting(topic) {
 
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('meeting').style.display = 'flex';
-  document.getElementById('header-right').style.display = 'flex';
+  document.getElementById('status-badge').style.display = 'flex';
+  document.getElementById('end-btn').style.display = 'flex';
   document.getElementById('topic-display').textContent = topic;
   document.getElementById('chat').innerHTML = '';
 
@@ -618,7 +699,8 @@ function endMeeting() {
   isRunning = false;
   document.getElementById('lobby').style.display = 'flex';
   document.getElementById('meeting').style.display = 'none';
-  document.getElementById('header-right').style.display = 'none';
+  document.getElementById('status-badge').style.display = 'none';
+  document.getElementById('end-btn').style.display = 'none';
   document.getElementById('chat').innerHTML = '';
   document.getElementById('custom-topic').value = '';
   setStatus(false);
@@ -737,7 +819,8 @@ function buildApiMessages(agent, latestUserMsg) {
 }
 
 async function callClaude(systemPrompt, msgs) {
-  const API_KEY = 'PASTE_YOUR_KEY_HERE'; // Thay bằng sk-ant-... của bạn
+  const API_KEY = localStorage.getItem('anthropic_key') || '';
+  if (!API_KEY) { showKeyModal(); throw new Error('Chưa có API key'); }
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -851,8 +934,52 @@ function escHtml(str) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+
+// ── API KEY MANAGEMENT ────────────────────────────────
+function showKeyModal() {
+  const modal = document.getElementById('key-modal');
+  const existing = localStorage.getItem('anthropic_key') || '';
+  document.getElementById('key-input').value = existing;
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('key-input').focus(), 100);
+}
+
+function saveKey() {
+  const val = document.getElementById('key-input').value.trim();
+  if (!val.startsWith('sk-')) {
+    alert('Key không hợp lệ. Phải bắt đầu bằng sk-ant-...');
+    return;
+  }
+  localStorage.setItem('anthropic_key', val);
+  document.getElementById('key-modal').style.display = 'none';
+  updateKeyIndicator();
+}
+
+function updateKeyIndicator() {
+  const key = localStorage.getItem('anthropic_key');
+  const dot = document.getElementById('key-dot');
+  const label = document.getElementById('key-label');
+  if (key && key.startsWith('sk-')) {
+    dot.className = 'key-dot ok';
+    label.style.color = 'var(--green)';
+    label.textContent = 'KEY ✓';
+  } else {
+    dot.className = 'key-dot';
+    label.style.color = 'var(--red)';
+    label.textContent = 'NO KEY';
+  }
+}
+
 // ── INIT ──────────────────────────────────────────────
 renderAgentsBar();
+updateKeyIndicator();
+// Show modal if no key saved
+if (!localStorage.getItem('anthropic_key')) {
+  setTimeout(showKeyModal, 500);
+}
+document.getElementById('key-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveKey();
+});
 document.getElementById('custom-topic').addEventListener('keydown', e => {
   if (e.key === 'Enter') startFromInput();
 });
