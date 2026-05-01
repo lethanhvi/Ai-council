@@ -32,8 +32,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
-  height: 100vh;
-  height: -webkit-fill-available;
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -167,7 +167,7 @@ body {
 .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
 
 /* MAIN */
-.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
 
 /* LOBBY */
 .lobby {
@@ -247,7 +247,7 @@ body {
 }
 
 /* MEETING */
-.meeting { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.meeting { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 
 .topic-bar {
   padding: 8px 16px;
@@ -266,11 +266,12 @@ body {
 
 /* CHAT */
 .chat {
-  flex: 1; overflow-y: scroll;
-  padding: 16px;
+  flex: 1;
+  overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+  padding: 16px;
+  min-height: 0;
 }
 
 .chat::-webkit-scrollbar { width: 3px; }
